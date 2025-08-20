@@ -1,4 +1,4 @@
-module main
+module github.com/VicAlexandre/pds-backend
 
 go 1.24.6
 

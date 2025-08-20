@@ -2,19 +2,16 @@ package main
 
 import (
 	"log"
-	"time"
+
+	"github.com/VicAlexandre/pds-backend/internal/app"
 )
 
 func main() {
-	cfg := config{
-		addr: ":8080",
-	}
+	cfg := app.NewConfig(":8080")
 
-	app := application{
-		config: cfg,
-	}
+	app := app.NewApplication(cfg)
 
-	mux := app.mount()
+	mux := app.Mount()
 
-	log.Fatal(app.run(mux))
+	log.Fatal(app.Run(mux))
 }
