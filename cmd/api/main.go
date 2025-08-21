@@ -14,9 +14,9 @@ func main() {
 	cfg := db.Config{
 		Host:     "localhost",
 		Port:     5432,
-		User:     "postgres",
+		User:     "pds",
 		Password: "secret",
-		DBName:   "pdsdb",
+		DBName:   "pds",
 		SSLMode:  "disable",
 	}
 
