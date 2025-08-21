@@ -2,19 +2,30 @@ package main
 
 import (
 	"log"
-	"time"
+
+	"github.com/VicAlexandre/pds-backend/internal/app"
+	"github.com/VicAlexandre/pds-backend/internal/db"
 )
 
 func main() {
-	cfg := config{
-		addr: ":8080",
+	app := app.NewApplication(app.NewConfig(":8080"))
+
+	// TODO: load db config from .env
+	cfg := db.Config{
+		Host:     "localhost",
+		Port:     5432,
+		User:     "pds",
+		Password: "secret",
+		DBName:   "pds",
+		SSLMode:  "disable",
 	}
 
-	app := application{
-		config: cfg,
+	conn, err := db.New(cfg)
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	mux := app.mount()
+	mux := app.Mount(conn)
 
-	log.Fatal(app.run(mux))
+	log.Fatal(app.Run(mux))
 }

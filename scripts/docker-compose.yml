@@ -1,0 +1,14 @@
+version: "3.8"
+services:
+  postgres:
+    image: postgres:16
+    container_name: pds_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: pds
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: pds
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
