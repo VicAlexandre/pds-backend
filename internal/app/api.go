@@ -1,11 +1,13 @@
 package app
 
 import (
+	"database/sql"
 	"log"
 	"net/http"
 	"time"
 
 	"github.com/VicAlexandre/pds-backend/internal/handlers"
+	"github.com/VicAlexandre/pds-backend/internal/models"
 	"github.com/VicAlexandre/pds-backend/internal/services"
 
 	"github.com/go-chi/chi/v5"
@@ -20,7 +22,7 @@ type Config struct {
 	addr string
 }
 
-func (app *Application) Mount() http.Handler {
+func (app *Application) Mount(conn *sql.DB) http.Handler {
 	r := chi.NewRouter()
 
 	/* middleware */
@@ -30,9 +32,14 @@ func (app *Application) Mount() http.Handler {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
 
+	/* models */
+	userModel := &models.UserModel{
+		DB: conn,
+	}
+
 	/* handlers */
 	authHandler := &handlers.AuthHandler{
-		AuthService: services.NewAuthService(),
+		AuthService: services.NewAuthService(userModel),
 	}
 
 	/* routes */

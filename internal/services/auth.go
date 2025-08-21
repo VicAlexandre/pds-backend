@@ -4,9 +4,14 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"golang.org/x/crypto/bcrypt"
+
+	"github.com/VicAlexandre/pds-backend/internal/models"
 )
 
 type RegisterInput struct {
+	Name     string `json:"name"`
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
@@ -22,38 +27,48 @@ type Tokens struct {
 	ExpiresAt    time.Time `json:"expires_at"`
 }
 
-type User struct {
-	ID    int64  `json:"id"`
-	Email string `json:"email"`
-}
-
 type AuthService struct {
-	// TODO: add dependencies like DB, cache, etc.
+	UserModel *models.UserModel
+	// TODO: TokenService (JWT or similar)
 }
 
-func NewAuthService() *AuthService {
-	return &AuthService{}
+func NewAuthService(userModel *models.UserModel) *AuthService {
+	return &AuthService{UserModel: userModel}
 }
 
-func (s *AuthService) Register(ctx context.Context, input RegisterInput) (*User, error) {
-	// TODO: validate, hash password, insert into DB
-	if input.Email == "" || input.Password == "" {
-		return nil, errors.New("email and password required")
+func (s *AuthService) Register(ctx context.Context, input RegisterInput) (*models.User, error) {
+	if input.Name == "" || input.Email == "" || input.Password == "" {
+		return nil, errors.New("name, email and password required")
 	}
 
-	user := &User{
-		ID:    1,
-		Email: input.Email,
+	hashed, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
 	}
+
+	user, err := s.UserModel.Insert(ctx, input.Name, input.Email, string(hashed))
+	if err != nil {
+		return nil, err
+	}
+
 	return user, nil
 }
 
 func (s *AuthService) Login(ctx context.Context, input LoginInput) (*Tokens, error) {
-	//TODO: validate credentials, check against DB and generate tokens
 	if input.Email == "" || input.Password == "" {
 		return nil, errors.New("invalid credentials")
 	}
 
+	user, err := s.UserModel.FindByEmail(ctx, input.Email)
+	if err != nil {
+		return nil, errors.New("invalid credentials")
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password)); err != nil {
+		return nil, errors.New("invalid credentials")
+	}
+
+	// TODO: replace with proper JWT generation
 	tokens := &Tokens{
 		AccessToken:  "fake-access-token",
 		RefreshToken: "fake-refresh-token",
@@ -63,6 +78,6 @@ func (s *AuthService) Login(ctx context.Context, input LoginInput) (*Tokens, err
 }
 
 func (s *AuthService) Logout(ctx context.Context) error {
-	// TODO: properly handle logout, e.g., invalidate tokens
+	// TODO: invalidate refresh token/session
 	return nil
 }
