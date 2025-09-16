@@ -10,6 +10,8 @@ import (
 	"github.com/VicAlexandre/pds-backend/internal/models"
 )
 
+const TokenDuration = 30 * time.Minute
+
 type RegisterInput struct {
 	Name     string `json:"name"`
 	Email    string `json:"email"`
@@ -21,23 +23,20 @@ type LoginInput struct {
 	Password string `json:"password"`
 }
 
-type Tokens struct {
-	AccessToken  string    `json:"access_token"`
-	RefreshToken string    `json:"refresh_token"`
-	ExpiresAt    time.Time `json:"expires_at"`
-}
-
 type AuthService struct {
-	UserModel *models.UserModel
-	// TODO: TokenService (JWT or similar)
+	UserModel  *models.UserModel
+	TokenModel *models.JWTModel
 }
 
-func NewAuthService(userModel *models.UserModel) *AuthService {
-	return &AuthService{UserModel: userModel}
+func NewAuthService(userModel *models.UserModel, tokenModel *models.JWTModel) *AuthService {
+	return &AuthService{
+		UserModel:  userModel,
+		TokenModel: tokenModel,
+	}
 }
 
-func (s *AuthService) Register(ctx context.Context, input RegisterInput) (*models.User, error) {
-	if input.Name == "" || input.Email == "" || input.Password == "" {
+func (s *AuthService) Register(ctx context.Context, input RegisterInput) (*models.Token, error) {
+	if input.Email == "" || input.Password == "" || input.Name == "" {
 		return nil, errors.New("name, email and password required")
 	}
 
@@ -51,10 +50,15 @@ func (s *AuthService) Register(ctx context.Context, input RegisterInput) (*model
 		return nil, err
 	}
 
-	return user, nil
+	token, err := s.TokenModel.GenerateJWT(user.ID, TokenDuration)
+	if err != nil {
+		return nil, err
+	}
+
+	return token, nil
 }
 
-func (s *AuthService) Login(ctx context.Context, input LoginInput) (*Tokens, error) {
+func (s *AuthService) Login(ctx context.Context, input LoginInput) (*models.Token, error) {
 	if input.Email == "" || input.Password == "" {
 		return nil, errors.New("invalid credentials")
 	}
@@ -68,16 +72,15 @@ func (s *AuthService) Login(ctx context.Context, input LoginInput) (*Tokens, err
 		return nil, errors.New("invalid credentials")
 	}
 
-	// TODO: replace with proper JWT generation
-	tokens := &Tokens{
-		AccessToken:  "fake-access-token",
-		RefreshToken: "fake-refresh-token",
-		ExpiresAt:    time.Now().Add(15 * time.Minute),
+	token, err := s.TokenModel.GenerateJWT(user.ID, TokenDuration)
+	if err != nil {
+		return nil, err
 	}
-	return tokens, nil
+
+	return token, nil
 }
 
 func (s *AuthService) Logout(ctx context.Context) error {
-	// TODO: invalidate refresh token/session
+	// TODO: implement refresh token invalidation or blacklist
 	return nil
 }

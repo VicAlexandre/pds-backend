@@ -37,9 +37,11 @@ func (app *Application) Mount(conn *sql.DB) http.Handler {
 		DB: conn,
 	}
 
+	tokenModel := &models.JWTModel{}
+
 	/* handlers */
 	authHandler := &handlers.AuthHandler{
-		AuthService: services.NewAuthService(userModel),
+		AuthService: services.NewAuthService(userModel, tokenModel),
 	}
 
 	/* routes */
