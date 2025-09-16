@@ -13,3 +13,13 @@
 ### Docente orientador
 
 - RANILSON OSCAR ARAUJO PAIVA
+
+## Preparação e execução do projeto
+
+```bash
+git clone https://github.com/VicAlexandre/pds-backend
+go get -u ./... 
+docker-compose -f scripts/docker-compose.yml up -d
+go run scripts/migration.go
+go run cmd/api/main.go
+```
