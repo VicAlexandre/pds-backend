@@ -1,31 +1,37 @@
 package main
 
 import (
+	"database/sql"
 	"log"
+	"os"
 
 	"github.com/VicAlexandre/pds-backend/internal/app"
-	"github.com/VicAlexandre/pds-backend/internal/db"
+	_ "github.com/lib/pq"
+	// "github.com/VicAlexandre/pds-backend/internal/db"
 )
 
 func main() {
 	app := app.NewApplication(app.NewConfig(":8080"))
 
-	// TODO: load db config from .env
-	cfg := db.Config{
-		Host:     "localhost",
-		Port:     5432,
-		User:     "pds",
-		Password: "secret",
-		DBName:   "pds",
-		SSLMode:  "disable",
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		// então, rodar localmente
+		dsn = "postgres://pds:secret@localhost:5432/pds?sslmode=disable"
+		log.Println("DATABASE_URL not set, using local fallback")
 	}
 
-	conn, err := db.New(cfg)
+	dbConn, err := sql.Open("postgres", dsn)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
+	defer dbConn.Close()
 
-	mux := app.Mount(conn)
+	if err := dbConn.Ping(); err != nil {
+		log.Fatalf("Database ping failed: %v", err)
+	}
 
+	mux := app.Mount(dbConn)
+
+	log.Println("Connected to database successfully!")
 	log.Fatal(app.Run(mux))
 }
