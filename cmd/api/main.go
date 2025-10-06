@@ -11,7 +11,13 @@ import (
 )
 
 func main() {
-	app := app.NewApplication(app.NewConfig(":8080"))
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080" // rodar localmente
+	}
+	addr := ":" + port
+
+	app := app.NewApplication(app.NewConfig(addr))
 
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
