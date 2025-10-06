@@ -15,7 +15,7 @@ func main() {
 	if port == "" {
 		port = "8080" // rodar localmente
 	}
-	addr := "0.0.0.0" + port
+	addr := "0.0.0.0:" + port
 	log.Println("Starting server on", addr)
 
 	app := app.NewApplication(app.NewConfig(addr))
