@@ -26,13 +26,6 @@ type Config struct {
 func (app *Application) Mount(conn *sql.DB) http.Handler {
 	r := chi.NewRouter()
 
-	/* middleware */
-	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
-	r.Use(middleware.Timeout(60 * time.Second))
-
 	/* cors handler */
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"https://apostilab.onrender.com/"},
@@ -42,6 +35,13 @@ func (app *Application) Mount(conn *sql.DB) http.Handler {
 		AllowCredentials: true,
 		MaxAge:           300,
 	}))
+
+	/* middleware */
+	r.Use(middleware.RequestID)
+	r.Use(middleware.RealIP)
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+	r.Use(middleware.Timeout(60 * time.Second))
 
 	/* models */
 	userModel := &models.UserModel{
