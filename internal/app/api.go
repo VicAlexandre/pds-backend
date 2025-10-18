@@ -55,6 +55,8 @@ func (app *Application) Mount(conn *sql.DB) http.Handler {
 		AuthService: services.NewAuthService(userModel, tokenModel),
 	}
 
+	meHandler := handlers.NewMeHandler(services.NewUserService(userModel))
+
 	/* routes */
 	r.Route("/v1", func(r chi.Router) {
 		/* health check route */
@@ -71,7 +73,7 @@ func (app *Application) Mount(conn *sql.DB) http.Handler {
 		// r.Group(func(r chi.Router) {
 		// 	r.Use(app.authMiddleware)
 		//
-		// 	r.Get("/me", app.getCurrentUserHandler)
+		r.Get("/me", meHandler.FetchUserData)
 		// 	r.Patch("/me", app.updateCurrentUserHandler)
 		// 	r.Delete("/me", app.deleteCurrentUserHandler)
 		//
