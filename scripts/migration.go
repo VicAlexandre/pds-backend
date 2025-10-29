@@ -35,11 +35,16 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Migration 001: create users
 	migrations := []struct {
 		version string
 		query   string
 	}{
+		{
+			version: "000_uuid_extension",
+			query: `
+				CREATE EXTENSION IF NOT EXISTS "uuid-ossp"
+				`,
+		},
 		{
 			version: "001_create_users",
 			query: `
@@ -51,6 +56,20 @@ func main() {
 					created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 					updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 				)
+					
+			`,
+		},
+		{
+			version: "002_create_apostilas",
+			query: `
+				CREATE TABLE IF NOT EXISTS apostilas (
+					id UUID PRIMARY KEY,
+					user_id INTEGER NOT NULL REFERENCES users(id),
+					edited_html TEXT,
+					pdf_raw BYTEA,
+					created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+					updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+			)
 			`,
 		},
 	}

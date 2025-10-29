@@ -50,12 +50,20 @@ func (app *Application) Mount(conn *sql.DB) http.Handler {
 
 	tokenModel := &models.JWTModel{}
 
+	apostilaModel := &models.ApostilaModel{
+		DB: conn,
+	}
+
 	/* handlers */
 	authHandler := &handlers.AuthHandler{
 		AuthService: services.NewAuthService(userModel, tokenModel),
 	}
 
 	meHandler := handlers.NewMeHandler(services.NewUserService(userModel))
+
+	apostilasHandler := &handlers.ApostilasHandler{
+		ApostilaService: services.NewApostilaService(apostilaModel, userModel, tokenModel),
+	}
 
 	/* routes */
 	r.Route("/v1", func(r chi.Router) {
@@ -82,6 +90,10 @@ func (app *Application) Mount(conn *sql.DB) http.Handler {
 		//
 		// r.Post("/forgot-password", app.forgotPasswordHandler)
 		// r.Post("/reset-password", app.resetPasswordHandler)
+		//
+		r.Post("/apostilas", apostilasHandler.AddApostila)
+		r.Put("/apostilas/edit", apostilasHandler.EditApostila)
+		r.Get("/apostilas/edited_html", apostilasHandler.GetEditedApostilaHTML)
 	})
 
 	return r

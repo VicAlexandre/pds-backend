@@ -10,7 +10,7 @@ import (
 	"github.com/VicAlexandre/pds-backend/internal/models"
 )
 
-const TokenDuration = 30 * time.Minute
+const TokenDuration = 60 * time.Minute
 
 type RegisterInput struct {
 	Name     string `json:"name"`
