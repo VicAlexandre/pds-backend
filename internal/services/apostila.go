@@ -152,75 +152,81 @@ const cleanupScript = `
 `
 
 func (s *ApostilaService) RenderApostilaPDF(ctx context.Context, input RenderPDFInput) ([]byte, error) {
-	// path pro Render (i.e. serviço de deploy)
-	chromePath := "/usr/bin/google-chrome" 
-	
-	// frescuras do Render
-	opts := append(chromedp.DefaultExecAllocatorOptions[:],
+    log.Printf("Starting PDF generation for HTML length: %d", len(input.Data.Html))
+
+    chromePaths := []string{
+        "/usr/bin/google-chrome",
+        "/usr/bin/chromium-browser", 
+        "/usr/bin/chromium",
+    }
+    
+    var chromePath string
+    for _, path := range chromePaths {
+        if _, err := os.Stat(path); err == nil {
+            chromePath = path
+            log.Printf("Found Chrome at: %s", path)
+            break
+        }
+    }
+    
+    if chromePath == "" {
+        return nil, fmt.Errorf("no Chrome executable found")
+    }
+
+    opts := []chromedp.ExecAllocatorOption{
         chromedp.ExecPath(chromePath),
-        chromedp.Flag("headless", true),
-        chromedp.Flag("no-sandbox", true),
-        chromedp.Flag("disable-setuid-sandbox", true),
-        chromedp.Flag("disable-dev-shm-usage", true),
-        chromedp.Flag("disable-gpu", true),
-        chromedp.Flag("single-process", true),
-        chromedp.Flag("no-zygote", true),
-    )
-	
-	allocCtx, cancel := chromedp.NewExecAllocator(ctx, opts...)
-	defer cancel()
-	
-	cctx, cancel := chromedp.NewContext(allocCtx)
-	defer cancel()
+        chromedp.Headless,
+        chromedp.NoSandbox,
+        chromedp.DisableGPU,
+    }
 
-	htmlB64 := base64.StdEncoding.EncodeToString([]byte(input.Data.Html))
-	dataURL := fmt.Sprintf("data:text/html;base64,%s", htmlB64)
-
-	var pdfBuf []byte
-	var bodyContent string
-
-	timeoutCtx, cancel := context.WithTimeout(cctx, 30*time.Second)
+    allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), opts...)
     defer cancel()
 
-	err := chromedp.Run(timeoutCtx,
-		chromedp.Navigate(dataURL),
+    browserCtx, cancel := chromedp.NewContext(allocCtx)
+    defer cancel()
 
-		chromedp.WaitReady("body", chromedp.ByQuery),
+    timeoutCtx, cancel := context.WithTimeout(browserCtx, 45*time.Second)
+    defer cancel()
 
-		chromedp.ActionFunc(func(ctx context.Context) error {
-				ctxErr := chromedp.Evaluate(cleanupScript, nil).Do(ctx)
-				if ctxErr != nil {
-					return fmt.Errorf("erro ao executar script de limpeza: %w", ctxErr)
-				}
-			return nil
-		}),
+    var pdfBuf []byte
 
-		chromedp.Sleep(2*time.Second),
+    htmlB64 := base64.StdEncoding.EncodeToString([]byte(input.Data.Html))
+    dataURL := fmt.Sprintf("data:text/html;base64,%s", htmlB64)
 
-		chromedp.Text("body", &bodyContent, chromedp.ByQuery, chromedp.NodeVisible),
+    log.Printf("Navigating to data URL and generating PDF...")
 
-		chromedp.ActionFunc(func(ctx context.Context) error {
-			var err error
-			pdfBuf, _, err = page.PrintToPDF().
-				WithPrintBackground(true).
-				WithPaperWidth(8.27).   // A4
-				WithPaperHeight(11.69). // A4
-				WithMarginTop(1.0).
-                WithMarginBottom(1.0).
-                WithMarginLeft(0.5).
-                WithMarginRight(0.5).
-				Do(ctx)
-			return err
-		}),
-	)
+    err := chromedp.Run(timeoutCtx,
+        chromedp.Navigate(dataURL),
+        chromedp.WaitReady("body", chromedp.ByQuery),
+        chromedp.Sleep(1*time.Second),
+        chromedp.ActionFunc(func(ctx context.Context) error {
+            var err error
+            pdfBuf, _, err = page.PrintToPDF().
+                WithPrintBackground(false),
+                WithPaperWidth(8.27).
+                WithPaperHeight(11.69).
+                WithMarginTop(0.3).
+                WithMarginBottom(0.3).
+                WithMarginLeft(0.3).
+                WithMarginRight(0.3).
+                Do(ctx)
+            if err != nil {
+                return fmt.Errorf("page.PrintToPDF failed: %w", err)
+            }
+            return nil
+        }),
+    )
 
-	if err != nil {
-		return nil, fmt.Errorf("erro ao renderizar PDF: %w", err)
-	}
+    if err != nil {
+        log.Printf("ChromeDP execution failed: %v", err)
+        return nil, fmt.Errorf("failed to generate PDF: %w", err)
+    }
 
-	if len(bodyContent) == 0 {
-		return nil, fmt.Errorf("PDF vazio: o HTML não foi renderizado")
-	}
+    if len(pdfBuf) == 0 {
+        return nil, fmt.Errorf("generated PDF is empty")
+    }
 
-	return pdfBuf, nil
+    log.Printf("PDF generated successfully: %d bytes", len(pdfBuf))
+    return pdfBuf, nil
 }
