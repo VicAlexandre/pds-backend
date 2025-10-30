@@ -153,7 +153,7 @@ const cleanupScript = `
 
 func (s *ApostilaService) RenderApostilaPDF(ctx context.Context, input RenderPDFInput) ([]byte, error) {
 	// path pro Render (i.e. serviço de deploy)
-	chromePath := "/usr/bin/google-chrome" 
+	chromePath := "/opt/render/project/.render/chrome/usr/bin/google-chrome" 
 	
 	// frescuras do Render
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
