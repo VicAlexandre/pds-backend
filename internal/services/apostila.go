@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"time"
-	"os"
 
 	"github.com/VicAlexandre/pds-backend/internal/models"
 	"github.com/chromedp/cdproto/page"
