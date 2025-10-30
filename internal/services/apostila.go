@@ -152,7 +152,25 @@ const cleanupScript = `
 `
 
 func (s *ApostilaService) RenderApostilaPDF(ctx context.Context, input RenderPDFInput) ([]byte, error) {
-	cctx, cancel := chromedp.NewContext(ctx)
+	// path pro Render (i.e. serviço de deploy)
+	chromePath := "/usr/bin/google-chrome" 
+	
+	// frescuras do Render
+	opts := append(chromedp.DefaultExecAllocatorOptions[:],
+        chromedp.ExecPath(chromePath),
+        chromedp.Flag("headless", true),
+        chromedp.Flag("no-sandbox", true),
+        chromedp.Flag("disable-setuid-sandbox", true),
+        chromedp.Flag("disable-dev-shm-usage", true),
+        chromedp.Flag("disable-gpu", true),
+        chromedp.Flag("single-process", true),
+        chromedp.Flag("no-zygote", true),
+    )
+	
+	allocCtx, cancel := chromedp.NewExecAllocator(ctx, opts...)
+	defer cancel()
+	
+	cctx, cancel := chromedp.NewContext(allocCtx)
 	defer cancel()
 
 	htmlB64 := base64.StdEncoding.EncodeToString([]byte(input.Data.Html))
@@ -161,17 +179,21 @@ func (s *ApostilaService) RenderApostilaPDF(ctx context.Context, input RenderPDF
 	var pdfBuf []byte
 	var bodyContent string
 
-	err := chromedp.Run(cctx,
+	timeoutCtx, cancel := context.WithTimeout(cctx, 30*time.Second)
+    defer cancel()
+
+	err := chromedp.Run(timeoutCtx,
 		chromedp.Navigate(dataURL),
 
 		chromedp.WaitReady("body", chromedp.ByQuery),
 
 		chromedp.ActionFunc(func(ctx context.Context) error {
-			ctxErr := chromedp.Evaluate(cleanupScript, nil).Do(ctx)
-			if ctxErr != nil {
-				return fmt.Errorf("erro ao executar script de limpeza: %w", ctxErr)
+			if input.Data.CleanupScript != "" { // se o script não for nulo...
+				ctxErr := chromedp.Evaluate(cleanupScript, nil).Do(ctx)
+				if ctxErr != nil {
+					return fmt.Errorf("erro ao executar script de limpeza: %w", ctxErr)
+				}
 			}
-
 			return nil
 		}),
 
@@ -185,6 +207,10 @@ func (s *ApostilaService) RenderApostilaPDF(ctx context.Context, input RenderPDF
 				WithPrintBackground(true).
 				WithPaperWidth(8.27).   // A4
 				WithPaperHeight(11.69). // A4
+				WithMarginTop(1.0).
+                WithMarginBottom(1.0).
+                WithMarginLeft(0.5).
+                WithMarginRight(0.5).
 				Do(ctx)
 			return err
 		}),
