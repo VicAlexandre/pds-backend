@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/VicAlexandre/pds-backend/internal/services"
@@ -87,5 +88,32 @@ func (h *ApostilasHandler) EditApostila(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "authorization header missing", http.StatusUnauthorized)
 		return
 	}
+
 	h.ApostilaService.EditApostila(r.Context(), input, token)
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *ApostilasHandler) RenderApostilaPDF(w http.ResponseWriter, r *http.Request) {
+	var input services.RenderPDFInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, "Invalid input", http.StatusBadRequest)
+		return
+	}
+
+	pdf, err := h.ApostilaService.RenderApostilaPDF(r.Context(), input)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/pdf")
+
+	// Optional but recommended: Specify Content-Length for efficiency
+	w.Header().Set("Content-Length", strconv.Itoa(len(pdf)))
+
+	// Optional: Suggest a filename to the browser (for direct link access)
+	w.Header().Set("Content-Disposition", "attachment; filename=\"apostila.pdf\"")
+
+	w.Write(pdf)
 }

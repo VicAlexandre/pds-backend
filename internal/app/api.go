@@ -94,6 +94,7 @@ func (app *Application) Mount(conn *sql.DB) http.Handler {
 		r.Post("/apostilas", apostilasHandler.AddApostila)
 		r.Put("/apostilas/edit", apostilasHandler.EditApostila)
 		r.Get("/apostilas/edited_html", apostilasHandler.GetEditedApostilaHTML)
+		r.Post("/apostilas/render_pdf", apostilasHandler.RenderApostilaPDF)
 	})
 
 	return r

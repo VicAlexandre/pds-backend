@@ -2,10 +2,14 @@ package services
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/VicAlexandre/pds-backend/internal/models"
+	"github.com/chromedp/cdproto/page"
+	"github.com/chromedp/chromedp"
 	"github.com/google/uuid"
 )
 
@@ -18,6 +22,12 @@ type EditedApostilaInput struct {
 	Data struct {
 		Id   string `json:"id"`
 		Html string `json:"file"`
+	} `json:"data"`
+}
+
+type RenderPDFInput struct {
+	Data struct {
+		Html string `json:"html"`
 	} `json:"data"`
 }
 
@@ -98,4 +108,95 @@ func (s *ApostilaService) EditApostila(ctx context.Context, input EditedApostila
 	}
 
 	return s.ApostilaModel.UpdateEditedHTMLByID(ctx, u, input.Data.Html, claims.UserID)
+}
+
+const cleanupScript = `
+(function() {
+    document.querySelectorAll('h2[role="button"]').forEach(h2 => {
+        h2.setAttribute("aria-expanded", "true");
+        let next = h2.nextElementSibling;
+        if (next && next.classList.contains('ouvir')) {
+            next = next.nextElementSibling;
+        }
+        if (next && next.classList.contains('content')) {
+            next.removeAttribute('hidden');
+        }
+    });
+
+    const controls = document.querySelector('.controls');
+    if (controls) {
+        controls.remove();
+    }
+    document.querySelectorAll('.ouvir').forEach(button => {
+        button.remove();
+    });
+    
+    document.querySelectorAll('.toggle-icon').forEach(icon => {
+        icon.textContent = " "; 
+    });
+
+    document.querySelectorAll('details.spoiler').forEach(details => {
+        const content = details.innerHTML;
+        const newDiv = document.createElement('div');
+        newDiv.innerHTML = content;
+        details.parentNode.replaceChild(newDiv, details);
+    });
+
+    const scriptTag = document.querySelector('script');
+    if (scriptTag) {
+        scriptTag.remove();
+    }
+
+    document.body.classList.remove('dark');
+})();
+`
+
+func (s *ApostilaService) RenderApostilaPDF(ctx context.Context, input RenderPDFInput) ([]byte, error) {
+	cctx, cancel := chromedp.NewContext(ctx)
+	defer cancel()
+
+	htmlB64 := base64.StdEncoding.EncodeToString([]byte(input.Data.Html))
+	dataURL := fmt.Sprintf("data:text/html;base64,%s", htmlB64)
+
+	var pdfBuf []byte
+	var bodyContent string
+
+	err := chromedp.Run(cctx,
+		chromedp.Navigate(dataURL),
+
+		chromedp.WaitReady("body", chromedp.ByQuery),
+
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			ctxErr := chromedp.Evaluate(cleanupScript, nil).Do(ctx)
+			if ctxErr != nil {
+				return fmt.Errorf("erro ao executar script de limpeza: %w", ctxErr)
+			}
+
+			return nil
+		}),
+
+		chromedp.Sleep(2*time.Second),
+
+		chromedp.Text("body", &bodyContent, chromedp.ByQuery, chromedp.NodeVisible),
+
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			var err error
+			pdfBuf, _, err = page.PrintToPDF().
+				WithPrintBackground(true).
+				WithPaperWidth(8.27).   // A4
+				WithPaperHeight(11.69). // A4
+				Do(ctx)
+			return err
+		}),
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("erro ao renderizar PDF: %w", err)
+	}
+
+	if len(bodyContent) == 0 {
+		return nil, fmt.Errorf("PDF vazio: o HTML não foi renderizado")
+	}
+
+	return pdfBuf, nil
 }
