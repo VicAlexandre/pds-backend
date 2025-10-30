@@ -188,12 +188,10 @@ func (s *ApostilaService) RenderApostilaPDF(ctx context.Context, input RenderPDF
 		chromedp.WaitReady("body", chromedp.ByQuery),
 
 		chromedp.ActionFunc(func(ctx context.Context) error {
-			if input.Data.CleanupScript != "" { // se o script não for nulo...
 				ctxErr := chromedp.Evaluate(cleanupScript, nil).Do(ctx)
 				if ctxErr != nil {
 					return fmt.Errorf("erro ao executar script de limpeza: %w", ctxErr)
 				}
-			}
 			return nil
 		}),
 
