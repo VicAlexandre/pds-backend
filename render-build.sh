@@ -4,19 +4,14 @@ set -o errexit
 
 STORAGE_DIR=/opt/render/project/.render
 
-# Store the current directory
-ORIGINAL_DIR=$(pwd)
-
-if [[ ! -d $STORAGE_DIR/chrome ]]; then
-  echo "...Downloading Chrome"
-  mkdir -p $STORAGE_DIR/chrome
-  cd $STORAGE_DIR/chrome
-  wget -P ./ https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-  dpkg -x ./google-chrome-stable_current_amd64.deb $STORAGE_DIR/chrome
-  rm ./google-chrome-stable_current_amd64.deb
-  cd $ORIGINAL_DIR # Return to original directory
+if [[ ! -d $STORAGE_DIR/chromium ]]; then
+  echo "...Installing Chromium"
+  mkdir -p $STORAGE_DIR
+  # Install Chromium using apt
+  apt-get update
+  apt-get install -y chromium chromium-l10n
 else
-  echo "...Using Chrome from cache"
+  echo "...Using Chromium from cache"
 fi
 
 go mod download
