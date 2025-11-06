@@ -117,3 +117,71 @@ func (h *ApostilasHandler) RenderApostilaPDF(w http.ResponseWriter, r *http.Requ
 
 	w.Write(pdf)
 }
+
+func (h *ApostilasHandler) GetAllApostilas(w http.ResponseWriter, r *http.Request) {
+	token, err := extractToken(r)
+	if err != nil {
+		http.Error(w, "authorization header missing", http.StatusUnauthorized)
+		return
+	}
+
+	apostilas, err := h.ApostilaService.GetAllApostilas(r.Context(), token)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(apostilas)
+}
+
+func (h *ApostilasHandler) GetApostilaByID(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		// Tenta pegar do path parameter (Chi router)
+		id = r.PathValue("id")
+	}
+	if id == "" {
+		http.Error(w, "id query parameter or path parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	// Token é opcional para permitir compartilhamento público
+	token, _ := extractToken(r)
+
+	apostila, err := h.ApostilaService.GetApostilaByID(r.Context(), id, token)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(apostila)
+}
+
+func (h *ApostilasHandler) DeleteApostila(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		// Tenta pegar do path parameter (Chi router)
+		id = r.PathValue("id")
+	}
+	if id == "" {
+		http.Error(w, "id query parameter or path parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	token, err := extractToken(r)
+	if err != nil {
+		http.Error(w, "authorization header missing", http.StatusUnauthorized)
+		return
+	}
+
+	err = h.ApostilaService.DeleteApostila(r.Context(), id, token)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"message": "apostila deleted successfully"})
+}

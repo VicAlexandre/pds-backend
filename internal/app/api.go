@@ -76,23 +76,18 @@ func (app *Application) Mount(conn *sql.DB) http.Handler {
 			r.Post("/login", authHandler.Login)
 			r.Post("/logout", authHandler.Logout)
 		})
-		//
-		// /* user management routes */
-		// r.Group(func(r chi.Router) {
-		// 	r.Use(app.authMiddleware)
-		//
+
+		/* user management routes */
 		r.Get("/me", meHandler.FetchUserData)
-		// 	r.Patch("/me", app.updateCurrentUserHandler)
-		// 	r.Delete("/me", app.deleteCurrentUserHandler)
-		//
-		// 	r.Patch("/me/password", app.changePasswordHandler)
-		// })
-		//
-		// r.Post("/forgot-password", app.forgotPasswordHandler)
-		// r.Post("/reset-password", app.resetPasswordHandler)
-		//
+		r.Patch("/me/password", meHandler.ChangePassword)
+		r.Delete("/me", meHandler.DeleteAccount)
+
+		/* apostilas routes */
+		r.Get("/apostilas", apostilasHandler.GetAllApostilas)
+		r.Get("/apostilas/{id}", apostilasHandler.GetApostilaByID)
 		r.Post("/apostilas", apostilasHandler.AddApostila)
 		r.Put("/apostilas/edit", apostilasHandler.EditApostila)
+		r.Delete("/apostilas/{id}", apostilasHandler.DeleteApostila)
 		r.Get("/apostilas/edited_html", apostilasHandler.GetEditedApostilaHTML)
 		r.Post("/apostilas/render_pdf", apostilasHandler.RenderApostilaPDF)
 	})

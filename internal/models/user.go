@@ -97,3 +97,50 @@ func (m *UserModel) FindByID(ctx context.Context, id int64) (*User, error) {
 
 	return &user, nil
 }
+
+func (m *UserModel) UpdatePassword(ctx context.Context, id int64, hashedPassword string) error {
+	query := `
+		UPDATE users
+		SET password = $1, updated_at = NOW()
+		WHERE id = $2
+	`
+
+	result, err := m.DB.ExecContext(ctx, query, hashedPassword, id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return errors.New("user not found")
+	}
+
+	return nil
+}
+
+func (m *UserModel) Delete(ctx context.Context, id int64) error {
+	query := `
+		DELETE FROM users
+		WHERE id = $1
+	`
+
+	result, err := m.DB.ExecContext(ctx, query, id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return errors.New("user not found")
+	}
+
+	return nil
+}

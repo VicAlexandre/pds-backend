@@ -200,3 +200,84 @@ func (s *ApostilaService) RenderApostilaPDF(ctx context.Context, input RenderPDF
 
 	return pdfBuf, nil
 }
+
+func (s *ApostilaService) GetAllApostilas(ctx context.Context, token string) ([]*models.Apostila, error) {
+	claims, err := s.TokenModel.ParseJWT(token)
+	if err != nil {
+		log.Println("Error parsing JWT: ", err)
+		return nil, err
+	}
+
+	apostilas, err := s.ApostilaModel.GetAllByUserID(ctx, claims.UserID)
+	if err != nil {
+		log.Println("Error getting apostilas: ", err)
+		return nil, err
+	}
+
+	log.Println("Retrieved", len(apostilas), "apostilas for user", claims.UserID)
+
+	return apostilas, nil
+}
+
+func (s *ApostilaService) GetApostilaByID(ctx context.Context, id string, token string) (*models.Apostila, error) {
+	u, err := uuid.Parse(id)
+	if err != nil {
+		fmt.Printf("Error parsing UUID: %v\n", err)
+		return nil, err
+	}
+
+	// Se tiver token, valida e verifica se é do usuário
+	if token != "" {
+		claims, err := s.TokenModel.ParseJWT(token)
+		if err != nil {
+			log.Println("Error parsing JWT: ", err)
+			return nil, err
+		}
+
+		apostila, err := s.ApostilaModel.GetByID(ctx, u)
+		if err != nil {
+			log.Println("Error getting apostila: ", err)
+			return nil, err
+		}
+
+		// Verifica se a apostila pertence ao usuário
+		if apostila.UserID != claims.UserID {
+			return nil, fmt.Errorf("unauthorized access to apostila")
+		}
+
+		return apostila, nil
+	}
+
+	// Se não tiver token, busca a apostila (para compartilhamento público)
+	apostila, err := s.ApostilaModel.GetByID(ctx, u)
+	if err != nil {
+		log.Println("Error getting apostila: ", err)
+		return nil, err
+	}
+
+	return apostila, nil
+}
+
+func (s *ApostilaService) DeleteApostila(ctx context.Context, id string, token string) error {
+	claims, err := s.TokenModel.ParseJWT(token)
+	if err != nil {
+		log.Println("Error parsing JWT: ", err)
+		return err
+	}
+
+	u, err := uuid.Parse(id)
+	if err != nil {
+		fmt.Printf("Error parsing UUID: %v\n", err)
+		return err
+	}
+
+	err = s.ApostilaModel.Delete(ctx, u, claims.UserID)
+	if err != nil {
+		log.Println("Error deleting apostila: ", err)
+		return err
+	}
+
+	log.Println("Deleted apostila ID:", u, "for user", claims.UserID)
+
+	return nil
+}
