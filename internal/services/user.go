@@ -15,7 +15,8 @@ type UserService struct {
 
 func NewUserService(userModel *models.UserModel) *UserService {
 	return &UserService{
-		UserModel: userModel,
+		UserModel:  userModel,
+		TokenModel: &models.JWTModel{},
 	}
 }
 

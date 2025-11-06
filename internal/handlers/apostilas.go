@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -15,19 +16,28 @@ type ApostilasHandler struct {
 }
 
 func extractToken(r *http.Request) (string, error) {
-	ctx := r.Context()
-
-	req := r.WithContext(ctx)
-
-	authHeader := req.Header.Get("Authorization")
+	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
-		log.Println("Authorization header missing: ", authHeader)
+		log.Println("Authorization header missing")
 		return "", http.ErrNoCookie
 	}
 
 	parts := strings.SplitN(authHeader, " ", 2)
+	if len(parts) != 2 {
+		log.Printf("Invalid authorization header format: %s", authHeader)
+		return "", fmt.Errorf("invalid authorization header format")
+	}
 
-	token := parts[1]
+	if strings.ToLower(parts[0]) != "bearer" {
+		log.Printf("Invalid authorization scheme: %s", parts[0])
+		return "", fmt.Errorf("invalid authorization scheme")
+	}
+
+	token := strings.TrimSpace(parts[1])
+	if token == "" {
+		log.Println("Empty token")
+		return "", fmt.Errorf("empty token")
+	}
 
 	return token, nil
 }

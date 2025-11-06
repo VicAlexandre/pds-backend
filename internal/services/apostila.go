@@ -202,11 +202,15 @@ func (s *ApostilaService) RenderApostilaPDF(ctx context.Context, input RenderPDF
 }
 
 func (s *ApostilaService) GetAllApostilas(ctx context.Context, token string) ([]*models.Apostila, error) {
+	log.Println("GetAllApostilas called with token:", token[:20]+"...")
+	
 	claims, err := s.TokenModel.ParseJWT(token)
 	if err != nil {
-		log.Println("Error parsing JWT: ", err)
+		log.Println("Error parsing JWT in GetAllApostilas: ", err)
 		return nil, err
 	}
+
+	log.Println("Token parsed successfully, UserID:", claims.UserID)
 
 	apostilas, err := s.ApostilaModel.GetAllByUserID(ctx, claims.UserID)
 	if err != nil {
