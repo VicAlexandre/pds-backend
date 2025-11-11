@@ -117,3 +117,25 @@ func (h *ApostilasHandler) RenderApostilaPDF(w http.ResponseWriter, r *http.Requ
 
 	w.Write(pdf)
 }
+
+func (h *ApostilasHandler) DeleteApostila(w http.ResponseWriter, r *http.Request) {
+	var input services.DeleteApostilaInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, "Invalid input", http.StatusBadRequest)
+		return
+	}
+
+	token, err := extractToken(r)
+	if err != nil {
+		http.Error(w, "authorization header missing", http.StatusUnauthorized)
+		return
+	}
+
+	err = h.ApostilaService.DeleteApostila(r.Context(), input, token)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}

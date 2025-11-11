@@ -92,6 +92,7 @@ func (app *Application) Mount(conn *sql.DB) http.Handler {
 		// r.Post("/reset-password", app.resetPasswordHandler)
 		//
 		r.Post("/apostilas", apostilasHandler.AddApostila)
+		r.Delete("/apostilas", apostilasHandler.DeleteApostila)
 		r.Put("/apostilas/edit", apostilasHandler.EditApostila)
 		r.Get("/apostilas/edited_html", apostilasHandler.GetEditedApostilaHTML)
 		r.Post("/apostilas/render_pdf", apostilasHandler.RenderApostilaPDF)

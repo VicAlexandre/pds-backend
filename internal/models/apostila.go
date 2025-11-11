@@ -89,3 +89,17 @@ func (m *ApostilaModel) GetEditedHTMLByID(ctx context.Context, id uuid.UUID, use
 
 	return &editedApostilaHTML, nil
 }
+
+func (m *ApostilaModel) Delete(ctx context.Context, id uuid.UUID, userID int64) error {
+	query := `
+	DELETE FROM apostilas
+	WHERE id = $1 AND user_id = $2
+	`
+
+	err := m.DB.QueryRowContext(ctx, query, id, userID).Err()
+	if err != nil {
+		return fmt.Errorf("ApostilaModel.Delete: %w", err)
+	}
+
+	return nil
+}

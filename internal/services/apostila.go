@@ -17,6 +17,10 @@ type AddApostilaInput struct {
 	Id string `json:"data"`
 }
 
+type DeleteApostilaInput struct {
+	Id string `json:"id"`
+}
+
 // EditedApostilaInput receives a 'data' field with the subfield 'id' and 'file' (html content)
 type EditedApostilaInput struct {
 	Data struct {
@@ -199,4 +203,20 @@ func (s *ApostilaService) RenderApostilaPDF(ctx context.Context, input RenderPDF
 	}
 
 	return pdfBuf, nil
+}
+
+func (s *ApostilaService) DeleteApostila(ctx context.Context, input DeleteApostilaInput, token string) error {
+	claims, err := s.TokenModel.ParseJWT(token)
+	if err != nil {
+		log.Println("Error parsing JWT: ", err)
+		return err
+	}
+
+	u, err := uuid.Parse(input.Id)
+	if err != nil {
+		fmt.Printf("Error parsing UUID: %v\n", err)
+		return err
+	}
+
+	return s.ApostilaModel.Delete(ctx, u, claims.UserID)
 }
